@@ -43,6 +43,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+//https://www.mirkosertic.de/blog/2013/07/realtime-face-detection-on-android-using-opencv/
+//http://opencvfacedetect.blogspot.de/2010/10/face-detectionfollowed-by-eyesnose.html
+
 public class MainActivity extends AppCompatActivity implements CvCameraViewListener2 {
     private static final String TAG = "OCVSample::Activity";
 
