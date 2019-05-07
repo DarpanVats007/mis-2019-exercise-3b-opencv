@@ -1,0 +1,1 @@
+We are using "haarcascad_mcs_nose.xml" for nose after face detection for detecting the nose area. After detecting the face we are drawing the red circle by calculating the mid point of the nose  and adding the width (width*.25), to the circle after checking the App with test subject over few iterations.
