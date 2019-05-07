@@ -1,5 +1,14 @@
 package mis.example.misopencv;
 
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.MenuItem;
+import android.view.WindowManager;
+import org.opencv.core.MatOfRect;
+
+
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
@@ -7,9 +16,11 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import android.Manifest;
@@ -39,6 +50,12 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     private boolean                 mIsJavaCamera = true;
     private MenuItem                mItemSwitchCamera = null;
 
+    private CascadeClassifier cascadeClassifier;
+    private CascadeClassifier noseClassifier;
+
+    private Mat grayscaleImage;
+    private int absoluteFaceSize;
+
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -46,7 +63,8 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
-                    mOpenCvCameraView.enableView();
+                    //mOpenCvCameraView.enableView();
+                    initializeOpenCVDependencies();
                 } break;
                 default:
                 {
@@ -109,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     }
 
     public void onCameraViewStarted(int width, int height) {
+        absoluteFaceSize = (int) (height * 0.2);
     }
 
     public void onCameraViewStopped() {
@@ -123,15 +142,64 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         Imgproc.rectangle(col, foo.tl(), foo.br(), new Scalar(0, 0, 255), 3);
         return col;
         */
+        MatOfRect faces = new MatOfRect();
+        MatOfRect noses = new MatOfRect();
 
         Mat gray = inputFrame.gray();
         Mat col  = inputFrame.rgba();
 
-        Mat tmp = gray.clone();
-        Imgproc.Canny(gray, tmp, 80, 100);
-        Imgproc.cvtColor(tmp, col, Imgproc.COLOR_GRAY2RGBA, 4);
+        if(cascadeClassifier != null && noseClassifier != null){
+            cascadeClassifier.detectMultiScale(col, faces, 1.1, 2, 2,
+                    new Size(absoluteFaceSize, absoluteFaceSize), new Size());
+
+            noseClassifier.detectMultiScale(col, noses, 1.1, 2, 2,
+                    new Size(absoluteFaceSize, absoluteFaceSize), new Size());
+        }
+
+        Rect[] facesArray = faces.toArray();
+        for (int i = 0; i <facesArray.length; i++)
+            Imgproc.rectangle(col, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
+
+        Rect[] nosesArray = noses.toArray();
+        for (int i = 0; i <nosesArray.length; i++)
+            //https://www.tutorialspoint.com/opencv/opencv_drawing_circle.htm
+            Imgproc.circle(col,
+                    new Point(nosesArray[i].x + nosesArray[i].width*0.5 ,nosesArray[i].y + nosesArray[i].height*0.5),
+                    (int) (nosesArray[i].width*.25),
+                    new Scalar(255,0,0),
+                    -1);
+
+//        Mat tmp = gray.clone();
+//        Imgproc.Canny(gray, tmp, 80, 100);
+//        Imgproc.cvtColor(tmp, col, Imgproc.COLOR_GRAY2RGBA, 4);
 
         return col;
+    }
+
+    private void initializeOpenCVDependencies() {
+
+        try {
+            // Copy the resource into a temp file so OpenCV can load it
+            String filePath = initAssetFile("haarcascade_frontalface_default.xml");
+            // Load the cascade classifier
+            cascadeClassifier = new CascadeClassifier(filePath);
+
+        } catch (Exception e) {
+            Log.e("OpenCVActivity", "Error loading cascade", e);
+        }
+
+        try {
+            // Copy the resource into a temp file so OpenCV can load it
+            String filePath = initAssetFile("haarcascade_mcs_nose.xml");
+            // Load the cascade classifier
+            noseClassifier = new CascadeClassifier(filePath);
+
+        } catch (Exception e) {
+            Log.e("OpenCVActivity", "Error loading cascade", e);
+        }
+
+        // And we are ready to go
+        mOpenCvCameraView.enableView();
     }
 
 
